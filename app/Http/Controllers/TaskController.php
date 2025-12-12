@@ -4,178 +4,166 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Models\Task;
-use App\Models\User;
+use App\Http\Services\Tasks\TasksService;
 use Exception;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    protected $tasksService;
 
+    // حقن الـ Service عبر Constructor
+    public function __construct(TasksService $tasksService)
+    {
+        $this->tasksService = $tasksService;
+    }
+
+    // إضافة مهمة للمفضلة
     public function addTaskToFavorites($taskId)
     {
-        Task::findOrFail($taskId);
-        Auth::user()->favoriteTasks()->syncWithoutDetaching($taskId);
-
-        return response()->json(
-            [
-                "message" => "Task added to favorites"
-            ],
-            201
-        );
+        try {
+            $this->tasksService->addTaskToFavorites($taskId);
+            return response()->json(["message" => "Task added to favorites"], 201);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
+    // إزالة مهمة من المفضلة
     public function deleteTaskFromFavorites($taskId)
     {
-        Task::findOrFail($taskId);
-        Auth::user()->favoriteTasks()->detach($taskId);
-        return response()->json([
-            "message" => "Task removed from favorite list successfuly"
-        ]);
+        try {
+            $this->tasksService->deleteTaskFromFavorites($taskId);
+            return response()->json(["message" => "Task removed from favorite list successfully"]);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
-
+    // عرض المهام المفضلة
     public function getFavoriteTasks()
     {
-        $favoriteTasks = Auth::user()->favoriteTasks()->get();
-        return response()->json([
-            "favorite tasks" => $favoriteTasks
-        ]);
+        try {
+            $favoriteTasks = $this->tasksService->getFavoriteTasks();
+            return response()->json(["favorite_tasks" => $favoriteTasks]);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
-
-
+    // عرض كل المهام
     public function getAllTasks()
     {
-        $tasks = Task::all();
-        return response()->json([
-            "tasks" => $tasks
-        ]);
+        try {
+            $tasks = $this->tasksService->getAllTasks();
+            return response()->json(["tasks" => $tasks]);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
+    // عرض المهام حسب الأولوية
     public function getTasksByPriority()
     {
-        $tasks = Auth::user()
-            ->tasks()
-            ->orderByRaw("FIELD(priority, 'high', 'medium', 'low')")
-            ->get();
-
-        return response()->json([
-            "tasks" => $tasks
-        ]);
+        try {
+            $tasks = $this->tasksService->getTasksByPriority();
+            return response()->json(["tasks" => $tasks]);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
-
+    // عرض مهام المستخدم الحالي
     public function index()
     {
-        $user_tasks = Auth::user()->tasks;
-        return response()->json($user_tasks);
+        try {
+            $tasks = $this->tasksService->index();
+            return response()->json($tasks);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // إنشاء مهمة جديدة
     public function store(StoreTaskRequest $request)
     {
-        $user_id = Auth::user()->id;
-        $validatedData = $request->validated();
-        $validatedData['user_id'] = $user_id;
-        $task = Task::create($validatedData);
-        return response()->json($task);
+        try {
+            $task = $this->tasksService->store($request->validated());
+            return response()->json($task, 201);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
-    /**
-     * Display the specified resource.
-     */
+    // عرض مهمة معينة
     public function show(int $id)
     {
-        $task = Task::find($id);
-        return response()->json($task);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateTaskRequest $request, string $id)
-    {
-
         try {
-            $task = Task::findOrFail($id);
-            $user_id = Auth::user()->id;
-            if ($user_id !== $task->user_id) {
-                return response()->json([
-                    "message" => "unauthorized",
-                ], 403);
-            }
-            $task->update($request->validated());
+            $task = $this->tasksService->show($id);
             return response()->json($task);
         } catch (ModelNotFoundException $e) {
-            return response()->json(
-                [
-                    "message" => "Task Not Found",
-                    "details" => $e->getMessage()
-                ],
-                404
-            );
+            return response()->json(["message" => "Task Not Found"], 404);
         } catch (Exception $e) {
-            return response()->json([
-                "message" => "some thing wrong",
-                "details" => $e->getMessage()
-            ], 500);
+            return response()->json(["message" => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-
-
-    public function destroy(string $id)
+    // تحديث مهمة
+    public function update(UpdateTaskRequest $request, int $id)
     {
         try {
-            $user_id = Auth::user()->id;
-            $task = Task::findOrFail($id);
-            if ($user_id !== $task->user_id) {
-                return response()->json([
-                    "message" => "unauthorized",
-                ], 403);
-            }
-            $task->delete();
-            return response()->json(null, 204);
+            $task = $this->tasksService->update($request->validated(), $id);
+            return response()->json($task);
         } catch (ModelNotFoundException $e) {
-            return response()->json(
-                [
-                    "message" =>  "Task Not Found",
-                    "details" => $e->getMessage()
-                ],
-                404
-            );
+            return response()->json(["message" => "Task Not Found"], 404);
         } catch (Exception $e) {
-            response()->json(
-                [
-                    "message" => "some thing wrong",
-                    "details" => $e->getMessage()
-                ],
-                500
-            );
+            if ($e->getMessage() === "unauthorized") {
+                return response()->json(["message" => "Unauthorized"], 403);
+            }
+            return response()->json(["message" => $e->getMessage()], 500);
         }
     }
 
-    public function getUserTasks($id)
+    // حذف مهمة
+    public function destroy(int $id)
     {
-        $tasks = User::find($id)->tasks;
-        return response()->json($tasks);
+        try {
+            $this->tasksService->destroy($id);
+            return response()->json(null, 204);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(["message" => "Task Not Found"], 404);
+        } catch (Exception $e) {
+            if ($e->getMessage() === "unauthorized") {
+                return response()->json(["message" => "Unauthorized"], 403);
+            }
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 
-    public function addCategoriesToTask(Request $request, $taskId)
+    // عرض مهام مستخدم معين
+    public function getUserTasks(int $id)
     {
-        $task = Task::findOrFail($taskId);
-        $task->categories()->attach($request->category_id);
-        return response()->json('Categories added successfuly');
+        try {
+            $tasks = $this->tasksService->getUserTasks($id);
+            return response()->json($tasks);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(["message" => "User Not Found"], 404);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
+    }
+
+    // إضافة تصنيفات لمهمة
+    public function addCategoriesToTask(Request $request, int $taskId)
+    {
+        try {
+            $this->tasksService->addCategoriesToTask(['category_id' => $request->category_id], $taskId);
+            return response()->json(["message" => "Categories added successfully"]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(["message" => "Task Not Found"], 404);
+        } catch (Exception $e) {
+            return response()->json(["message" => $e->getMessage()], 500);
+        }
     }
 }

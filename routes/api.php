@@ -5,6 +5,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -53,12 +54,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('', [ProfileController::class, 'getProfile']);
         Route::get('/users/{id}', [ProfileController::class, 'show']);
         Route::get('/{id}', [ProfileController::class, 'showProfile']);
-        Route::put('/{id}', [ProfileController::class, 'edite']);
+        Route::put('/{id}', [ProfileController::class, 'edit']);
+        Route::delete('/{id}' , [ProfileController::class, 'destroy']);
     });
 
 
     Route::get('user/{id}/tasks', [TaskController::class, 'getUserTasks']);
-    Route::get('task/{id}/user', [UserController::class, 'getTasksUser']);
+    Route::get('tasks/{id}/user', [UserController::class, 'getTasksUser']);
     Route::get('user', [UserController::class, 'getAuthUser']);
 
     Route::post('category', [CategoryController::class, 'store']);

@@ -3,22 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\UserResource;
-use App\Models\Task;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Services\Users\UsersService;
+
 
 class UserController extends Controller
 {
+    protected $usersService;
+    public function __construct(UsersService $usersService)
+    {
+        $this->usersService = $usersService;
+    }
     public function getTasksUser($id)
     {
-        $user = Task::find($id)->user;
+        $user = $this->usersService->getTasksUser($id);
         return response()->json($user);
     }
     public function getAuthUser()
     {
-        $user_id = Auth::user()->id;
-        $user = User::with('profile')->findOrFail($user_id);
+        $user = $this->usersService->getAuthUser();
         return new UserResource($user);
     }
 }

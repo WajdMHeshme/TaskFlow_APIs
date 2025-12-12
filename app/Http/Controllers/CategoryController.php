@@ -3,30 +3,40 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCategoryRequest;
+use App\Http\Services\Categories\CategoriesService;
 use App\Models\Category;
 use App\Models\Task;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
+    protected $categoryService;
+    public function __construct(CategoriesService $categoryService)
+    {
+        $this->categoryService = $categoryService;
+    }
+
     public function store(StoreCategoryRequest $request)
     {
-        $category = Category::create($request->validated());
+        $category = $this->categoryService->store($request->validated());
         return response()->json([
             'message' => 'category created successfuly',
             'category' => $category
         ], 201);
     }
 
-    public function getTaskCategories($taskID)
+    public function getTaskCategories($taskId)
     {
-        $categories = Task::find($taskID)->categories;
-        return response()->json($categories);
+        $categories = $this->categoryService->getTaskCategories($taskId);
+        return response()->json([
+            "categories" => $categories
+        ]);
     }
 
-    public function getCategoriesTask($catID)
+    public function getCategoriesTask($catId)
     {
-        $tasks = Category::find($catID)->tasks;
-        return response()->json($tasks);
+        $tasks = $this->categoryService->getCategoriesTask($catId);
+        return response()->json([
+            "tasks" => $tasks
+        ]);
     }
 }
