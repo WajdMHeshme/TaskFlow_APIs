@@ -13,7 +13,7 @@ class CategorySeeder extends Seeder
     {
         $categories = [
             'programming',
-            'personal',
+            'personal', 
             'unpersonal',
             'private',
             'public'
